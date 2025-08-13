@@ -1,24 +1,111 @@
-#!/bin/bash
-
-if [ $# -ne 2 ]; then
-    echo "Uso: $0 arquivo.flex arquivo_entrada"
-    exit 1
-fi
-
-FLEX_FILE="$1"
-INPUT_FILE="$2"
+import java.io.InputStreamReader;
+%%
 
 
-BASENAME=$(basename "$FLEX_FILE" .flex)
+%public
+%class NewLexico
+%integer
+%unicode
+%line
 
 
-JAVA_CLASS="$(tr '[:lower:]' '[:upper:]' <<< ${BASENAME:0:1})${BASENAME:1}"
+%{
 
-[ -f "${JAVA_CLASS}.java" ] && rm "${JAVA_CLASS}.java"
-[ -f "${JAVA_CLASS}.class" ] && rm "${JAVA_CLASS}.class"
 
-java -jar jflex.jar "$FLEX_FILE"
+public static int INT			= 258;
+public static int FLOAT = 259;
 
-javac "${JAVA_CLASS}.java"
+public static int ARRAY	= 265;
+public static int JSON	= 266;
+public static int OBJECT = 267;
+public static int MEMBERS = 268;
+public static int ELEMENTS = 269;
+public static int VALUE = 270;
+public static int STRING = 271;
 
-java "$JAVA_CLASS" "$INPUT_FILE"
+/**
+   * Runs the scanner on input files.
+   *
+   * This is a standalone scanner, it will print any unmatched
+   * text to System.out unchanged.
+   *
+   * @param argv   the command line, contains the filenames to run
+   *               the scanner on.
+   */
+  public static void main(String argv[]) {
+    NewLexico scanner;
+    if (argv.length == 0) {
+      try {        
+          // scanner = new MeuLexico( System.in );
+          scanner = new NewLexico( new InputStreamReader(System.in) );
+          while ( !scanner.zzAtEOF ) 
+	        System.out.println("token: "+scanner.yylex()+"\t<"+scanner.yytext()+">");
+        }
+        catch (Exception e) {
+          System.out.println("Unexpected exception:");
+          e.printStackTrace();
+        }
+        
+    }
+    else {
+      for (int i = 0; i < argv.length; i++) {
+        scanner = null;
+        try {
+          scanner = new NewLexico( new java.io.FileReader(argv[i]) );
+          while ( !scanner.zzAtEOF ) 	
+                System.out.println("token: "+scanner.yylex()+"\t<"+scanner.yytext()+">");
+        }
+        catch (java.io.FileNotFoundException e) {
+          System.out.println("File not found : \""+argv[i]+"\"");
+        }
+        catch (java.io.IOException e) {
+          System.out.println("IO error scanning file \""+argv[i]+"\"");
+          System.out.println(e);
+        }
+        catch (Exception e) {
+          System.out.println("Unexpected exception:");
+          e.printStackTrace();
+        }
+      }
+    }
+  }
+
+
+%}
+
+ 
+NUMBER=		[0-9]
+LETTER=		[a-zA-Z]
+WHITESPACE=	[ \t]
+LineTerminator = \r|\n|\r\n 
+STRING= \"[^\"]*\"
+FLOAT={NUMBER}+(\.{NUMBER}+)? 
+INT={NUMBER}+
+VALUE = {STRING}|{FLOAT}|{INT}
+MEMBER      = {STRING}:{VALUE}
+OBJECT = \{ {MEMBER}(,{MEMBER})*\} 
+ELEMENTS    = {VALUE}(,{VALUE})*
+ARRAY       = \[({ELEMENTS})?\]
+
+
+
+
+%%
+
+
+{VALUE}               {return VALUE;}
+{INT}                 {return INT;}
+{FLOAT}               {return FLOAT;}                                    
+{STRING}              {return STRING;}
+{MEMBER}(,{MEMBER})*  {return MEMBERS;}
+{OBJECT}              {return OBJECT;}
+{ARRAY}               {return ARRAY;}
+{OBJECT}|{ARRAY} {return JSON;}
+
+
+
+
+
+{WHITESPACE}+               { }
+{LineTerminator}		{}
+.          {System.out.println(yyline+1 + ": caracter invalido: "+yytext());}
