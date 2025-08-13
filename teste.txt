@@ -1,0 +1,8 @@
+22
+22.2
+"teste"
+{"id":1,"name":"Vinicius","age":22}
+[]
+[1,2,3]
+["apple","banana","cherry"]
+[1,"two",3.0]
